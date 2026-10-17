@@ -83,6 +83,12 @@ h2 { font-size:1.3rem; margin-top:40px; border-bottom:2px solid var(--gold); pad
 .export-btn { display:block; margin:0 auto 30px; background:white; border:2px solid var(--red); color:var(--red); padding:8px 18px; border-radius:6px; cursor:pointer; font-size:0.85rem; }
 .reset-session-btn { display:block; margin:14px auto 0; background:#fff; border:2px solid #8a1f1f; color:#8a1f1f; padding:8px 20px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:bold; }
 .reset-session-btn:hover { background:#8a1f1f; color:white; }
+
+.expense-type-tabs { display:flex; justify-content:center; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+.expense-type-tab { background:white; border:2px solid var(--red); color:var(--red); padding:6px 16px; border-radius:18px; cursor:pointer; font-size:0.82rem; font-weight:bold; }
+.expense-type-tab.active { background:var(--red); color:white; }
+.general-expense-label { text-align:center; font-size:0.82rem; color:#777; margin-bottom:10px; font-style:italic; }
+
 .budget-form { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; align-items:center; margin-bottom:12px; }
 .budget-form input, .budget-form select { padding:8px; border:1px solid #ccc; border-radius:4px; }
 .budget-form select#expPandal { min-width:220px; }
@@ -122,6 +128,10 @@ table.expense-table td.et-actions { white-space:nowrap; text-align:right; }
 .session-code-box { background: white; border-radius: 8px; padding: 14px; margin: 14px 0; }
 #sessionCodeText, #sessionCodeInput { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-family: monospace; font-size: 0.8rem; resize: vertical; margin-bottom: 10px; }
 footer { text-align:center; font-size:0.8rem; color:#999; margin-top:50px; }
+.footer-links { margin-top:10px; }
+.footer-links a { color:#8a5a00; text-decoration:none; margin:0 8px; font-weight:bold; }
+.footer-links a:hover { text-decoration:underline; }
+.footer-sep { color:#ccc; }
 .livemap-section { background:white; border-radius:10px; padding:16px; margin:20px 0; }
 .livemap-heading { font-weight:bold; color:var(--red); font-size:0.95rem; margin:0 0 8px; text-align:center; }
 .livemap-top-row { display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap; margin-bottom:10px; }
@@ -251,6 +261,12 @@ footer { text-align:center; font-size:0.8rem; color:#999; margin-top:50px; }
   <h2>Puja Expense Tracker</h2>
   <div class="debug-banner" id="budgetDebugBanner"></div>
   <div class="editing-banner" id="editingBanner">Editing an existing entry - update the fields below, then click "Update Expense" to save, or "Cancel Edit" to leave it unchanged.</div>
+
+  <div class="expense-type-tabs">
+    <button class="expense-type-tab active" id="tabPandalExpense" data-type="pandal" onclick="switchExpenseType('pandal')">Pandal Visit</button>
+    <button class="expense-type-tab" id="tabGeneralExpense" data-type="general" onclick="switchExpenseType('general')">General Expense (clothing, gifts, etc.)</button>
+  </div>
+
   <div class="budget-form">
     <select id="expPandal"></select>
     <input type="text" id="customPandalName" placeholder="Type pandal name" style="display:none;">
@@ -270,6 +286,8 @@ footer { text-align:center; font-size:0.8rem; color:#999; margin-top:50px; }
     <button class="btn-update" id="btnUpdateExpense" onclick="addExpense()" style="display:none;">Update Expense</button>
     <button class="btn-cancel" id="btnCancelEdit" onclick="cancelEdit()" style="display:none;">Cancel Edit</button>
   </div>
+  <p class="general-expense-label" id="generalExpenseLabel" style="display:none;">Logging a general Puja expense - not tied to a specific pandal (new clothes, gifts, overall donations, and so on).</p>
+
   <div id="customCategoryRow" class="custom-category-row" style="display:none;">
     <input type="text" id="newCategoryName" placeholder="Type your custom category name">
     <button onclick="addCustomCategory()">Add Category</button>
@@ -325,7 +343,15 @@ footer { text-align:center; font-size:0.8rem; color:#999; margin-top:50px; }
     <button class="export-btn" onclick="loadSessionCode()">Load My Session</button>
     <button class="reset-session-btn" onclick="resetSession()">Reset Session (clear all my data)</button>
   </div>
-  <footer>Built as a weekend learning project - Durga Puja 2026</footer>
+  <footer>
+    Built as a weekend learning project &middot; Durga Puja 2026
+    <div class="footer-links">
+      <a href="https://ichaki.wordpress.com/" target="_blank" rel="noopener">Blog</a><span class="footer-sep">·</span>
+      <a href="https://github.com/ichakiwrites" target="_blank" rel="noopener">GitHub</a><span class="footer-sep">·</span>
+      <a href="https://www.instagram.com/ichakiwrites/" target="_blank" rel="noopener">Instagram</a><span class="footer-sep">·</span>
+      <a href="https://www.linkedin.com/in/ipshita-chaki" target="_blank" rel="noopener">LinkedIn</a>
+    </div>
+  </footer>
 </div>
 <script>
 
@@ -792,6 +818,7 @@ const ALL_PANDALS = [
     {name:'Ranchi Bengali Association', city:'Ranchi', state:'Jharkhand', zone:'Ranchi', district:'', group:'Rest of India', lat:23.3441, lon:85.3096}
   ];
 const GROUP_ORDER = ['Kolkata – North','Kolkata – South','Kolkata – Central','Kolkata – Salt Lake / East','Howrah','West Bengal – Other Districts','Delhi NCR','Mumbai','Bengaluru','Rest of India'];
+const GENERAL_EXPENSE_LABEL = "General Puja Expense";
 
 const PUJA_DAYS = [
   { key:'shashthi', label:'Shashthi', date:'Oct 16' },
@@ -853,6 +880,26 @@ document.getElementById('expPandal').addEventListener('change', function() {
   const customInput = document.getElementById('customPandalName');
   customInput.style.display = (this.value === '__other__') ? 'inline-block' : 'none';
 });
+
+/* ===================== EXPENSE TYPE TOGGLE: Pandal Visit <-> General ===================== */
+let expenseType = 'pandal';
+function switchExpenseType(type) {
+  expenseType = type;
+  document.getElementById('tabPandalExpense').classList.toggle('active', type === 'pandal');
+  document.getElementById('tabGeneralExpense').classList.toggle('active', type === 'general');
+  const pandalSel = document.getElementById('expPandal');
+  const customInput = document.getElementById('customPandalName');
+  const generalLabel = document.getElementById('generalExpenseLabel');
+  if (type === 'general') {
+    pandalSel.style.display = 'none';
+    customInput.style.display = 'none';
+    generalLabel.style.display = 'block';
+  } else {
+    pandalSel.style.display = 'inline-block';
+    generalLabel.style.display = 'none';
+    if (pandalSel.value === '__other__') { customInput.style.display = 'inline-block'; }
+  }
+}
 
 let expenses = [];
 try {
@@ -940,10 +987,15 @@ function toggleFormButtons(isEditing) {
 }
 
 function addExpense() {
-  const pandalSel = document.getElementById('expPandal');
-  let pandalName = pandalSel.value;
-  if (pandalName === '__other__') { pandalName = document.getElementById('customPandalName').value.trim(); }
-  if (!pandalName) { showBudgetMessage("Please choose a pandal, or type one in.", true); return; }
+  let pandalName;
+  if (expenseType === 'general') {
+    pandalName = GENERAL_EXPENSE_LABEL;
+  } else {
+    const pandalSel = document.getElementById('expPandal');
+    pandalName = pandalSel.value;
+    if (pandalName === '__other__') { pandalName = document.getElementById('customPandalName').value.trim(); }
+    if (!pandalName) { showBudgetMessage("Please choose a pandal, or type one in.", true); return; }
+  }
   const dayKey = document.getElementById('expDay').value;
   const categorySel = document.getElementById('expCategory');
   const category = categorySel.value;
@@ -972,15 +1024,20 @@ function addExpense() {
 function editExpense(idx) {
   const e = expenses[idx];
   if (!e) return;
-  const pandalSel = document.getElementById('expPandal');
-  const hasOption = Array.from(pandalSel.options).some(function(o){ return o.value === e.pandal; });
-  if (hasOption) {
-    pandalSel.value = e.pandal;
-    document.getElementById('customPandalName').style.display = 'none';
+  if (e.pandal === GENERAL_EXPENSE_LABEL) {
+    switchExpenseType('general');
   } else {
-    pandalSel.value = '__other__';
-    document.getElementById('customPandalName').style.display = 'inline-block';
-    document.getElementById('customPandalName').value = e.pandal;
+    switchExpenseType('pandal');
+    const pandalSel = document.getElementById('expPandal');
+    const hasOption = Array.from(pandalSel.options).some(function(o){ return o.value === e.pandal; });
+    if (hasOption) {
+      pandalSel.value = e.pandal;
+      document.getElementById('customPandalName').style.display = 'none';
+    } else {
+      pandalSel.value = '__other__';
+      document.getElementById('customPandalName').style.display = 'inline-block';
+      document.getElementById('customPandalName').value = e.pandal;
+    }
   }
   document.getElementById('expDay').value = e.day || 'other';
   const catSel = document.getElementById('expCategory');
@@ -1017,7 +1074,7 @@ function renderExpenseTable() {
     wrap.innerHTML = '<p class="expense-empty">No expenses logged yet - add one above.</p>';
     return;
   }
-  let html = '<table class="expense-table"><tr><th>Pandal</th><th>Category</th><th>Day</th><th>Amount</th><th></th></tr>';
+  let html = '<table class="expense-table"><tr><th>Pandal / Type</th><th>Category</th><th>Day</th><th>Amount</th><th></th></tr>';
   expenses.forEach(function(e, idx) {
     html += '<tr><td>' + e.pandal + '</td><td>' + e.category + '</td><td>' + DAY_SHORT_BY_KEY[e.day || 'other'] + '</td>' +
       '<td class="et-amount">Rs ' + e.amount.toLocaleString() + '</td>' +
@@ -1055,13 +1112,28 @@ function renderBudget() {
       if (pieChart) pieChart.destroy();
       pieChart = new Chart(pieCtx, { type: 'pie', data: { labels: pieLabels, datasets: [{ data: pieData, backgroundColor: pieColors }] }, options: chartOpts });
 
+      /* Spending-by-Pandal: General Expenses are now broken out by category
+         (e.g. "General - Clothes & Shopping") instead of lumped into one bar,
+         and colored to match that category for visual consistency with the
+         pie chart. Pandal-visit bars stay in the brand red. */
       const pandalTotals = {};
-      expenses.forEach(function(e) { pandalTotals[e.pandal] = (pandalTotals[e.pandal] || 0) + e.amount; });
+      const pandalBarColors = {};
+      expenses.forEach(function(e) {
+        var key = e.pandal;
+        var color = '#B01E28';
+        if (e.pandal === GENERAL_EXPENSE_LABEL) {
+          key = 'General - ' + e.category;
+          color = categoryColors[e.category] || '#777777';
+        }
+        pandalTotals[key] = (pandalTotals[key] || 0) + e.amount;
+        pandalBarColors[key] = color;
+      });
       const barLabels = Object.keys(pandalTotals);
       const barData = barLabels.map(function(k) { return pandalTotals[k]; });
+      const barColors = barLabels.map(function(k) { return pandalBarColors[k]; });
       const barCtx = document.getElementById('barChart');
       if (barChart) barChart.destroy();
-      barChart = new Chart(barCtx, { type: 'bar', data: { labels: barLabels, datasets: [{ label: 'Spend (Rs)', data: barData, backgroundColor: '#B01E28' }] }, options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { font: { size: 9 } } } } } });
+      barChart = new Chart(barCtx, { type: 'bar', data: { labels: barLabels, datasets: [{ label: 'Spend (Rs)', data: barData, backgroundColor: barColors }] }, options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { font: { size: 9 } } } } } });
 
       const dayTotals = {};
       PUJA_DAYS.forEach(function(d) { dayTotals[d.key] = 0; });
@@ -1085,7 +1157,7 @@ function renderBudget() {
   renderLiveMap();
 }
 function exportExpensesCSV() {
-  let csv = "Pandal,Category,Amount (INR),Puja Day\n";
+  let csv = "Pandal / Type,Category,Amount (INR),Puja Day\n";
   expenses.forEach(function(e) { csv += '"' + e.pandal + '","' + e.category + '",' + e.amount + ',"' + DAY_SHORT_BY_KEY[e.day || 'other'] + '"\n'; });
   downloadCSV(csv, 'my_puja_expenses.csv');
 }
@@ -1157,7 +1229,7 @@ function renderLiveMap() {
   });
   svgParts.push('</svg>');
   wrap.innerHTML = svgParts.join('');
-  noteEl.textContent = visitedCount + ' of ' + visiblePandals.length + ' pandals logged' + (liveMapView === 'kolkata' ? ' (Kolkata/Howrah)' : ' (All India)') + '.';
+  noteEl.textContent = visitedCount + ' of ' + visiblePandals.length + ' pandals logged' + (liveMapView === 'kolkata' ? ' (Kolkata/Howrah)' : ' (All India)') + '. General expenses (clothing, gifts) are tracked in the charts and table, not on this map.';
 }
 document.querySelectorAll('.livemap-tab').forEach(function(tab) {
   tab.addEventListener('click', function () {
@@ -1170,7 +1242,7 @@ document.querySelectorAll('.livemap-tab').forEach(function(tab) {
 });
 
 renderBudget();
-console.log("Expense tracker + Puja Day tracking set up with", ALL_PANDALS.length, "pandals.");
+console.log("Expense tracker + Puja Day tracking + General Expense mode set up with", ALL_PANDALS.length, "pandals.");
 
 function showSessionMessage(msg, isError) {
   const banner = document.getElementById('sessionDebugBanner');
@@ -1241,6 +1313,7 @@ function resetSession() {
     if (!fixedCats.includes(k)) delete categoryColors[k];
   });
   cancelEdit();
+  switchExpenseType('pandal');
   document.getElementById('customPandalName').value = "";
   document.getElementById('customPandalName').style.display = 'none';
   document.getElementById('newCategoryName').value = "";
