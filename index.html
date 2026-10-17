@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Durga Puja — Interactive Expense Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root { --red:#B01E28; --gold:#D4A017; --cream:#FFF8E7; --dark:#3A1A1A; }
+* { box-sizing: border-box; }
+body { margin:0; font-family: Georgia, 'Times New Roman', serif; background: var(--cream); color: var(--dark); padding: 20px; }
+h1, h2 { text-align:center; color: var(--red); font-weight:400; }
+h1 { font-size:2rem; letter-spacing:2px; }
+h2 { font-size:1.3rem; margin-top:40px; border-bottom:2px solid var(--gold); padding-bottom:8px; }
+.container { max-width:1000px; margin:0 auto; }
+.subtitle { text-align:center; color:#777; margin-top:-10px; }
+.mode-tabs { display:flex; justify-content:center; gap:8px; margin:20px 0 10px; flex-wrap:wrap; }
+.mode-tab { background:white; border:2px solid var(--gold); color:var(--dark); padding:7px 14px; border-radius:20px; cursor:pointer; font-size:0.85rem; }
+.mode-tab.active { background:var(--gold); color:white; border-color:var(--gold); }
+.scene { display:none; } .scene.active { display:block; }
+.scene-caption { text-align:center; font-size:0.8rem; color:#888; margin-top:8px; max-width:520px; margin-left:auto; margin-right:auto; }
+.mini-tab { background:white; border:1px solid var(--red); color:var(--red); padding:4px 10px; border-radius:14px; cursor:pointer; font-size:0.75rem; }
+.mini-tab.active { background:var(--red); color:white; }
+.mini-tabs { display:flex; justify-content:center; gap:6px; margin:6px 0; flex-wrap:wrap; }
+.shuffle-btn { display:block; margin:12px auto 0; background:var(--red); color:white; border:none; padding:7px 16px; border-radius:6px; cursor:pointer; font-size:0.82rem; }
+.alpana-wrap { display:flex; justify-content:center; margin:10px 0; }
+.alpana { position:relative; width:220px; height:220px; }
+.petal { position:absolute; width:40px; height:90px; border-radius:50% 50% 0 0; top:20px; left:90px; transform-origin:50% 110px; cursor:pointer; opacity:0.85; }
+.petal:hover { opacity:1; }
+.ring-dot { position:absolute; width:26px; height:26px; border-radius:50%; cursor:pointer; opacity:0.85; }
+.ring-dot:hover { opacity:1; }
+.grid-cell { position:absolute; width:36px; height:36px; cursor:pointer; opacity:0.85; border-radius:4px; }
+.grid-cell:hover { opacity:1; }
+.dhaak-stage { display:flex; justify-content:center; align-items:center; margin:16px 0; position:relative; height:170px; }
+.dhaak-body { width:120px; height:60px; background:var(--dark); border-radius:12px; position:relative; border:4px solid var(--gold); cursor:pointer; }
+.dhaak-body.playing { border-color:var(--red); }
+.dhaak-body::before, .dhaak-body::after { content:''; position:absolute; width:112px; height:10px; background:#8B5E3C; left:0px; border-radius:4px; }
+.dhaak-body::before { top:-4px; } .dhaak-body::after { bottom:-4px; }
+.stick { position:absolute; width:4px; height:46px; background:#5C3A21; border-radius:2px; top:-50px; transform-origin:bottom center; transition:transform 0.1s ease; }
+.stick.left { left:28px; transform:rotate(-25deg); } .stick.right { left:88px; transform:rotate(25deg); }
+.stick.hit.left { transform:rotate(10deg); } .stick.hit.right { transform:rotate(-10deg); }
+.ripple { position:absolute; border:3px solid var(--red); border-radius:50%; width:120px; height:120px; opacity:0; pointer-events:none; }
+.ripple.animate { animation: ripple-out 0.5s ease-out; }
+@keyframes ripple-out { 0% { transform:scale(0.6); opacity:0.8; } 100% { transform:scale(2); opacity:0; } }
+.dhaak-hint { text-align:center; font-size:0.85rem; color:#888; }
+.dhaak-controls { max-width:380px; margin:14px auto 0; background:white; border-radius:8px; padding:14px 18px; }
+.control-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; font-size:0.82rem; }
+.control-row label { width:70px; flex-shrink:0; }
+.control-row input[type="range"] { flex:1; }
+.control-row .val-display { width:38px; text-align:right; font-size:0.75rem; color:#999; }
+.reset-controls-btn { display:block; margin:4px auto 0; background:white; border:2px solid var(--red); color:var(--red); padding:6px 16px; border-radius:16px; cursor:pointer; font-size:0.8rem; }
+.beat-select { display:flex; gap:6px; justify-content:center; margin-bottom:10px; flex-wrap:wrap; }
+.beat-btn { background:white; border:1px solid var(--gold); color:var(--dark); padding:5px 12px; border-radius:14px; cursor:pointer; font-size:0.78rem; }
+.beat-btn.active { background:var(--gold); color:white; }
+.lights-wrap { display:flex; flex-direction:column; align-items:center; }
+.lights-row { display:flex; gap:8px; justify-content:center; margin:20px 0; flex-wrap:wrap; max-width:460px; }
+.bulb { width:22px; height:22px; border-radius:50%; background:#555; }
+.lights-row.chase .bulb { animation-name: chaseBulbAnim; animation-duration: 1.2s; animation-timing-function: linear; animation-iteration-count: infinite; }
+@keyframes chaseBulbAnim { 0% { opacity:1; box-shadow:0 0 14px 5px currentColor; } 12% { opacity:0.25; box-shadow:none; } 100% { opacity:0.25; box-shadow:none; } }
+.lights-row.twinkle .bulb { animation-name: twinkleBulbAnim; animation-duration: 1.6s; animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
+@keyframes twinkleBulbAnim { 0%, 100% { opacity:1; } 50% { opacity:0.2; } }
+.color-select, .light-pattern-select { display:flex; gap:8px; justify-content:center; margin-top:6px; flex-wrap:wrap; }
+.color-btn, .light-pattern-btn { background:white; border:1px solid var(--gold); color:var(--dark); padding:6px 14px; border-radius:14px; cursor:pointer; font-size:0.82rem; }
+.color-btn.active, .light-pattern-btn.active { background:var(--gold); color:white; }
+.section-label { font-size:0.75rem; text-transform:uppercase; letter-spacing:1px; color:#999; margin:10px 0 4px; text-align:center; }
+.dhunuchi-wrap { display:flex; flex-direction:column; align-items:center; position:relative; }
+#dancerStage { position:relative; width:260px; height:320px; }
+#dancerGroupWrap { transform-origin: 130px 300px; }
+@keyframes swayDanceSlow { 0% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } 100% { transform: rotate(-5deg); } }
+@keyframes swayDanceMedium { 0% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } 100% { transform: rotate(-5deg); } }
+@keyframes swayDanceFast { 0% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } 100% { transform: rotate(-5deg); } }
+@keyframes flourishKick { 0% { transform: rotate(-5deg) scale(1); } 50% { transform: rotate(16deg) scale(1.08); } 100% { transform: rotate(-5deg) scale(1); } }
+.smoke-puff { position:absolute; font-size:1.3rem; opacity:0; pointer-events:none; }
+.tempo-select { display:flex; gap:8px; justify-content:center; margin:14px 0 6px; }
+.tempo-btn { background:white; border:1px solid var(--gold); color:var(--dark); padding:5px 14px; border-radius:14px; cursor:pointer; font-size:0.8rem; }
+.tempo-btn.active { background:var(--gold); color:white; }
+.playpause-btn { display:block; margin:10px auto 0; background:var(--red); color:white; border:none; padding:10px 28px; border-radius:22px; cursor:pointer; font-size:1rem; }
+.flourish-btn { display:block; margin:8px auto 0; background:white; border:2px solid var(--red); color:var(--red); padding:6px 16px; border-radius:16px; cursor:pointer; font-size:0.8rem; }
+.status-text { text-align:center; font-size:0.85rem; color:#888; margin-top:6px; min-height:1.2em; }
+.add-section { background:white; border-radius:8px; padding:16px; margin-bottom:20px; }
+.add-label { font-size:0.78rem; text-transform:uppercase; letter-spacing:1px; color:#999; margin-bottom:6px; text-align:center; }
+.divider-or { text-align:center; font-size:0.75rem; color:#aaa; margin:4px 0 14px; text-transform:uppercase; letter-spacing:1px; }
+.export-btn { display:block; margin:0 auto 30px; background:white; border:2px solid var(--red); color:var(--red); padding:8px 18px; border-radius:6px; cursor:pointer; font-size:0.85rem; }
+.reset-session-btn { display:block; margin:14px auto 0; background:#fff; border:2px solid #8a1f1f; color:#8a1f1f; padding:8px 20px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:bold; }
+.reset-session-btn:hover { background:#8a1f1f; color:white; }
+.budget-form { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; align-items:center; margin-bottom:12px; }
+.budget-form input, .budget-form select { padding:8px; border:1px solid #ccc; border-radius:4px; }
+.budget-form select#expPandal { min-width:220px; }
+.budget-form select#expDay { min-width:140px; }
+.budget-form button { border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:0.85rem; }
+.btn-add { background:var(--red); color:white; }
+.btn-update { background:#4A7A9E; color:white; }
+.btn-cancel { background:white; border:2px solid #999 !important; color:#666; }
+.custom-category-row { display: flex; gap: 8px; justify-content: center; margin: 0 auto 20px; max-width: 400px; flex-wrap: wrap; }
+.custom-category-row input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; flex: 1; min-width: 180px; }
+.custom-category-row button { background: var(--red); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+.total-display { text-align:center; font-size:1.4rem; color:var(--red); margin:20px 0; }
+.category-row { margin-bottom:10px; }
+.category-label { display:flex; justify-content:space-between; font-size:0.9rem; margin-bottom:4px; }
+.cat-bar-outer { background:#eee; border-radius:8px; height:10px; overflow:hidden; }
+.cat-bar-inner { height:100%; transition:width 0.3s ease; }
+.editing-banner { text-align:center; font-size:0.78rem; color:#8a5a00; background:#fdf0d5; border:1px solid var(--gold); border-radius:6px; padding:6px 10px; margin-bottom:10px; display:none; }
+.editing-banner.show { display:block; }
+.expense-table-wrap { margin-top:14px; overflow-x:auto; }
+table.expense-table { width:100%; border-collapse:collapse; font-size:0.8rem; }
+table.expense-table th { text-align:left; font-size:0.7rem; text-transform:uppercase; color:#999; padding:4px 6px; border-bottom:2px solid #eee; }
+table.expense-table td { padding:5px 6px; border-bottom:1px solid #f0f0f0; vertical-align:middle; }
+table.expense-table td.et-amount { color:var(--red); font-weight:bold; white-space:nowrap; }
+table.expense-table td.et-actions { white-space:nowrap; text-align:right; }
+.et-btn { border:none; background:none; cursor:pointer; font-size:0.78rem; padding:2px 6px; border-radius:4px; }
+.et-edit { color:#4A7A9E; } .et-edit:hover { background:#eaf1f7; }
+.et-delete { color:var(--red); } .et-delete:hover { background:#fde2e2; }
+.expense-empty { text-align:center; font-size:0.8rem; color:#aaa; padding:10px 0; }
+.charts-row { display:flex; gap:16px; justify-content:center; align-items:stretch; flex-wrap:wrap; margin-top:24px; margin-bottom:20px; }
+.chart-box { background:white; border-radius:8px; padding:14px; flex:1 1 280px; max-width:320px; min-width:240px; }
+.chart-box h3 { text-align:center; font-size:0.88rem; color:var(--dark); margin:0 0 10px; font-weight:bold; }
+.chart-canvas-wrap { position:relative; height:200px; }
+.chart-fallback { text-align:center; font-size:0.8rem; color:#aaa; padding:20px 0; }
+.debug-banner { background:#fff3cd; border:1px solid #D4A017; border-radius:6px; padding:10px 14px; margin:10px 0; font-size:0.82rem; display:none; }
+.session-wrap { max-width: 500px; margin: 0 auto 30px; text-align: center; }
+.session-label { font-size: 0.82rem; color: #777; margin-bottom: 6px; }
+.session-code-box { background: white; border-radius: 8px; padding: 14px; margin: 14px 0; }
+#sessionCodeText, #sessionCodeInput { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-family: monospace; font-size: 0.8rem; resize: vertical; margin-bottom: 10px; }
+footer { text-align:center; font-size:0.8rem; color:#999; margin-top:50px; }
+.livemap-section { background:white; border-radius:10px; padding:16px; margin:20px 0; }
+.livemap-heading { font-weight:bold; color:var(--red); font-size:0.95rem; margin:0 0 8px; text-align:center; }
+.livemap-top-row { display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap; margin-bottom:10px; }
+.livemap-tabs { display:flex; gap:6px; }
+.livemap-tab { background:white; border:1px solid var(--red); color:var(--red); padding:4px 12px; border-radius:12px; cursor:pointer; font-size:0.76rem; }
+.livemap-tab.active { background:var(--red); color:white; }
+.livemap-legend-inline { display:flex; gap:14px; font-size:0.74rem; color:#888; }
+.livemap-legend-inline span { display:inline-flex; align-items:center; gap:4px; }
+.livemap-legend-inline .dot { width:9px; height:9px; border-radius:50%; display:inline-block; }
+.livemap-svg-wrap { display:flex; justify-content:center; overflow-x:auto; }
+.livemap-pin { cursor:pointer; transition: r 0.2s ease, opacity 0.2s ease; }
+.livemap-pin:hover { opacity:1 !important; }
+.livemap-note { text-align:center; font-size:0.74rem; color:#aaa; margin-top:8px; }
+.livemap-tooltip { margin:8px auto 0; max-width:440px; background:#fdf6e3; border:1px solid var(--gold); border-radius:6px; padding:7px 14px; font-size:0.8rem; display:none; text-align:left; }
+.livemap-tooltip.open { display:block; }
+.livemap-tooltip .close-x { float:right; cursor:pointer; color:#aaa; font-size:0.88rem; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Durga Puja — Interactive Expense Tracker</h1>
+  <p class="subtitle">A weekend learning project &middot; HTML, CSS &amp; JavaScript, built with AI direction</p>
+  <div class="mode-tabs">
+    <button class="mode-tab active" data-mode="alpana">Alpana</button>
+    <button class="mode-tab" data-mode="dhaak">Dhaak</button>
+    <button class="mode-tab" data-mode="lights">Pandal Lights</button>
+    <button class="mode-tab" data-mode="dhunuchi">Dhunuchi Naach</button>
+  </div>
+  <div class="scene active" id="scene-alpana">
+    <div class="mini-tabs">
+      <button class="mini-tab active" data-pattern="petals">Petals</button>
+      <button class="mini-tab" data-pattern="ring">Diya Ring</button>
+      <button class="mini-tab" data-pattern="grid">Grid</button>
+    </div>
+    <div class="alpana-wrap"><div class="alpana" id="alpana"></div></div>
+    <p class="scene-caption">Click any shape to change its colour.</p>
+    <button class="shuffle-btn" onclick="shufflePalette()">New Colours</button>
+  </div>
+  <div class="scene" id="scene-dhaak">
+    <div class="beat-select">
+      <button class="beat-btn active" data-beat="aarti">Aarti Beat</button>
+      <button class="beat-btn" data-beat="dhunuchi">Dhunuchi Beat</button>
+      <button class="beat-btn" data-beat="bisorjon">Bisorjon Farewell</button>
+    </div>
+    <div class="dhaak-stage">
+      <div class="ripple" id="ripple"></div>
+      <div class="dhaak-body" id="dhaak">
+        <div class="stick left" id="stickL"></div>
+        <div class="stick right" id="stickR"></div>
+      </div>
+    </div>
+    <p class="dhaak-hint" id="dhaakHint">click once - it plays for a full minute. Click again to stop early.</p>
+    <div class="dhaak-controls">
+      <div class="control-row"><label>Volume</label><input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="0.85"><span class="val-display" id="volumeVal">85%</span></div>
+      <div class="control-row"><label>Pitch</label><input type="range" id="pitchSlider" min="0.5" max="2" step="0.05" value="1"><span class="val-display" id="pitchVal">1.0x</span></div>
+      <div class="control-row"><label>Treble</label><input type="range" id="trebleSlider" min="500" max="8000" value="3000"><span class="val-display" id="trebleVal">3000</span></div>
+      <div class="control-row"><label>Echo</label><input type="range" id="echoSlider" min="0" max="0.6" step="0.01" value="0.15"><span class="val-display" id="echoVal">0.15</span></div>
+      <div class="control-row"><label>Reverb</label><input type="range" id="reverbSlider" min="0" max="1" step="0.05" value="0.2"><span class="val-display" id="reverbVal">20%</span></div>
+      <button class="reset-controls-btn" onclick="resetDhaakControls()">Reset to Default</button>
+    </div>
+    <p class="scene-caption">Pick a beat style, then click once. Five standard drum-mixer controls, built live with the Web Audio API.</p>
+  </div>
+  <div class="scene" id="scene-lights">
+    <div class="lights-wrap">
+      <div class="lights-row" id="lightsRow"></div>
+      <p class="section-label">Colour</p>
+      <div class="color-select">
+        <button class="color-btn active" data-color="gold">Gold</button>
+        <button class="color-btn" data-color="red">Red</button>
+        <button class="color-btn" data-color="blue">Blue</button>
+        <button class="color-btn" data-color="green">Green</button>
+        <button class="color-btn" data-color="multi">Multicolor</button>
+      </div>
+      <p class="section-label">Pattern</p>
+      <div class="light-pattern-select">
+        <button class="light-pattern-btn active" data-light="steady">Steady</button>
+        <button class="light-pattern-btn" data-light="chase">Chase</button>
+        <button class="light-pattern-btn" data-light="twinkle">Twinkle</button>
+        <button class="light-pattern-btn" data-light="wave">Wave</button>
+        <button class="light-pattern-btn" data-light="alternate">Alternate</button>
+      </div>
+    </div>
+    <p class="scene-caption">Pandal illumination artists build entire lit scenes from colour and pattern combinations like these.</p>
+  </div>
+  <div class="scene" id="scene-dhunuchi">
+    <div class="dhunuchi-wrap">
+      <div id="dancerStage">
+        <svg width="260" height="320" viewBox="0 0 260 320" id="dancerSvg">
+          <g id="dancerGroupWrap">
+            <ellipse cx="130" cy="300" rx="34" ry="7" fill="#000" opacity="0.08"/>
+            <path d="M100 150 Q80 220 70 290 Q130 310 190 290 Q180 220 160 150 Z" fill="#FFFDF7" stroke="#C9A876" stroke-width="1.5"/>
+            <path d="M72 283 Q130 300 188 283 L186 292 Q130 308 74 292 Z" fill="#B01E28"/>
+            <path d="M100 150 Q80 220 70 290" fill="none" stroke="#B01E28" stroke-width="4"/>
+            <path d="M160 150 Q180 220 190 290" fill="none" stroke="#B01E28" stroke-width="4"/>
+            <path d="M103 160 Q85 190 92 225" stroke="#F2C14E" stroke-width="12" fill="none" stroke-linecap="round"/>
+            <rect x="110" y="118" width="40" height="40" rx="10" fill="#B01E28"/>
+            <rect x="122" y="105" width="16" height="16" fill="#F2C14E"/>
+            <circle cx="130" cy="90" r="22" fill="#F2C14E" stroke="#8B5E3C" stroke-width="1.5"/>
+            <circle cx="130" cy="68" r="10" fill="#1A1A1A"/>
+            <path d="M110 85 Q108 65 130 62 Q152 65 150 85 Q150 95 130 98 Q110 95 110 85 Z" fill="#1A1A1A"/>
+            <circle cx="130" cy="82" r="2.5" fill="#B01E28"/>
+            <circle cx="123" cy="90" r="1.8" fill="#1A1A1A"/>
+            <circle cx="137" cy="90" r="1.8" fill="#1A1A1A"/>
+            <path d="M124 97 Q130 100 136 97" stroke="#8B5E3C" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+            <path d="M148 125 Q168 95 162 55" stroke="#F2C14E" stroke-width="12" fill="none" stroke-linecap="round"/>
+            <g id="potAtHand" transform="translate(148,40)">
+              <path d="M0 0 L26 0 L20 24 L6 24 Z" fill="#D4A017" stroke="#8B5E3C" stroke-width="1.3"/>
+              <ellipse cx="13" cy="0" rx="14" ry="4" fill="#E8B33D" stroke="#8B5E3C" stroke-width="1"/>
+            </g>
+          </g>
+        </svg>
+        <div id="smokeLayer"></div>
+      </div>
+      <div class="tempo-select">
+        <button class="tempo-btn" data-tempo="slow">Slow</button>
+        <button class="tempo-btn active" data-tempo="medium">Medium</button>
+        <button class="tempo-btn" data-tempo="fast">Fast</button>
+      </div>
+      <button class="playpause-btn" id="playPauseBtn">Play Dhunuchi Naach</button>
+      <button class="flourish-btn" id="flourishBtn">Add a flourish</button>
+      <p class="status-text" id="dancerStatus">Press play - music, smoke, and sway all start together.</p>
+    </div>
+    <p class="scene-caption">A looping melody plays while the dancer sways and smoke rises - all generated live.</p>
+  </div>
+
+  <h2>Puja Expense Tracker</h2>
+  <div class="debug-banner" id="budgetDebugBanner"></div>
+  <div class="editing-banner" id="editingBanner">Editing an existing entry - update the fields below, then click "Update Expense" to save, or "Cancel Edit" to leave it unchanged.</div>
+  <div class="budget-form">
+    <select id="expPandal"></select>
+    <input type="text" id="customPandalName" placeholder="Type pandal name" style="display:none;">
+    <select id="expDay"></select>
+    <select id="expCategory" onchange="handleCategorySelectChange()">
+      <option value="Clothes & Shopping">Clothes &amp; Shopping</option>
+      <option value="Food">Food</option>
+      <option value="Transport">Transport</option>
+      <option value="Chanda (Donation)">Chanda (Donation)</option>
+      <option value="Puja Essentials">Puja Essentials</option>
+      <option value="Gifts & Bijoya">Gifts &amp; Bijoya</option>
+      <option value="Miscellaneous">Miscellaneous</option>
+      <option value="__custom__">+ Add Custom Category</option>
+    </select>
+    <input type="number" id="expAmount" placeholder="Amount">
+    <button class="btn-add" id="btnAddExpense" onclick="addExpense()">+ Add Expense</button>
+    <button class="btn-update" id="btnUpdateExpense" onclick="addExpense()" style="display:none;">Update Expense</button>
+    <button class="btn-cancel" id="btnCancelEdit" onclick="cancelEdit()" style="display:none;">Cancel Edit</button>
+  </div>
+  <div id="customCategoryRow" class="custom-category-row" style="display:none;">
+    <input type="text" id="newCategoryName" placeholder="Type your custom category name">
+    <button onclick="addCustomCategory()">Add Category</button>
+  </div>
+  <div class="total-display" id="totalDisplay">Total spent: Rs 0</div>
+  <div id="categoryBreakdown"></div>
+  <div class="expense-table-wrap" id="expenseTableWrap"></div>
+
+  <div class="charts-row">
+    <div class="chart-box">
+      <h3>Spending by Category</h3>
+      <div class="chart-canvas-wrap" id="pieChartWrap"><canvas id="pieChart"></canvas></div>
+    </div>
+    <div class="chart-box">
+      <h3>Spending by Pandal</h3>
+      <div class="chart-canvas-wrap" id="barChartWrap"><canvas id="barChart"></canvas></div>
+    </div>
+    <div class="chart-box">
+      <h3>Spending by Puja Day</h3>
+      <div class="chart-canvas-wrap" id="dayChartWrap"><canvas id="dayChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="livemap-section">
+    <h3 class="livemap-heading">Live Visit Map</h3>
+    <div class="livemap-top-row">
+      <div class="livemap-tabs">
+        <button class="livemap-tab active" data-view="india">All India</button>
+        <button class="livemap-tab" data-view="kolkata">Kolkata Zoom</button>
+      </div>
+      <div class="livemap-legend-inline">
+        <span><span class="dot" style="background:#D4A017; box-shadow:0 0 6px 2px rgba(212,160,23,0.7);"></span>Spent</span>
+        <span><span class="dot" style="background:#bbb;"></span>Not yet</span>
+      </div>
+    </div>
+    <div class="livemap-svg-wrap" id="liveMapSvgWrap"></div>
+    <div class="livemap-tooltip" id="liveMapTooltip"></div>
+    <p class="livemap-note" id="liveMapNote"></p>
+  </div>
+
+  <button class="export-btn" onclick="exportExpensesCSV()">Export My Expenses to Excel (CSV)</button>
+  <h2>Save &amp; Carry Your Session</h2>
+  <div class="debug-banner" id="sessionDebugBanner"></div>
+  <div class="session-wrap">
+    <button class="export-btn" onclick="generateSessionCode()">Save My Session as a Code</button>
+    <div id="sessionCodeDisplay" class="session-code-box" style="display:none;">
+      <p class="session-label">Your session code (copy this somewhere safe):</p>
+      <textarea id="sessionCodeText" readonly rows="4"></textarea>
+      <button class="export-btn" onclick="copySessionCode()">Copy to Clipboard</button>
+    </div>
+    <div class="divider-or">on another device, paste your code here</div>
+    <textarea id="sessionCodeInput" rows="4" placeholder="Paste your session code here..."></textarea>
+    <button class="export-btn" onclick="loadSessionCode()">Load My Session</button>
+    <button class="reset-session-btn" onclick="resetSession()">Reset Session (clear all my data)</button>
+  </div>
+  <footer>Built as a weekend learning project - Durga Puja 2026</footer>
+</div>
+<script>
+
+console.log("Script started loading.");
+document.querySelectorAll('.mode-tabs .mode-tab').forEach(function(tab) {
+  tab.addEventListener('click', function () {
+    document.querySelectorAll('.mode-tabs .mode-tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.scene').forEach(function(s) { s.classList.remove('active'); });
+    tab.classList.add('active');
+    document.getElementById('scene-' + tab.dataset.mode).classList.add('active');
+    if (tab.dataset.mode !== 'dhunuchi') stopDance();
+    if (tab.dataset.mode !== 'dhaak') stopDhaakLoop();
+  });
+});
+let alpanaColors = ['#D4A017', '#B01E28', '#8B0000', '#E8B33D'];
+const alpanaEl = document.getElementById('alpana');
+let currentPattern = 'petals';
+function buildAlpana() {
+  alpanaEl.innerHTML = "";
+  if (currentPattern === 'petals') {
+    for (let i = 0; i < 12; i++) {
+      const petal = document.createElement('div');
+      petal.className = 'petal';
+      petal.style.transform = 'rotate(' + (i * 30) + 'deg)';
+      petal.style.background = alpanaColors[i % alpanaColors.length];
+      petal.dataset.idx = i % alpanaColors.length;
+      petal.addEventListener('click', function () { cyclePetalColor(this); });
+      alpanaEl.appendChild(petal);
+    }
+  } else if (currentPattern === 'ring') {
+    const count = 10;
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * 2 * Math.PI;
+      const x = 110 + 85 * Math.cos(angle);
+      const y = 110 + 85 * Math.sin(angle);
+      const dot = document.createElement('div');
+      dot.className = 'ring-dot';
+      dot.style.left = x + 'px'; dot.style.top = y + 'px';
+      dot.style.background = alpanaColors[i % alpanaColors.length];
+      dot.dataset.idx = i % alpanaColors.length;
+      dot.addEventListener('click', function () { cyclePetalColor(this); });
+      alpanaEl.appendChild(dot);
+    }
+  } else if (currentPattern === 'grid') {
+    let i = 0;
+    for (let row = 0; row < 5; row++) {
+      for (let col = 0; col < 5; col++) {
+        const cell = document.createElement('div');
+        cell.className = 'grid-cell';
+        cell.style.left = (col * 40 + 10) + 'px';
+        cell.style.top = (row * 40 + 10) + 'px';
+        cell.style.background = alpanaColors[i % alpanaColors.length];
+        cell.dataset.idx = i % alpanaColors.length;
+        cell.addEventListener('click', function () { cyclePetalColor(this); });
+        alpanaEl.appendChild(cell);
+        i++;
+      }
+    }
+  }
+}
+function cyclePetalColor(el) {
+  let idx = parseInt(el.dataset.idx || 0);
+  idx = (idx + 1) % alpanaColors.length;
+  el.dataset.idx = idx;
+  el.style.background = alpanaColors[idx];
+}
+function shufflePalette() {
+  const pool = ['#D4A017','#B01E28','#8B0000','#E8B33D','#C9184A','#FFB347','#6B2737','#F4A300'];
+  alpanaColors = [];
+  for (let i = 0; i < 4; i++) alpanaColors.push(pool[Math.floor(Math.random() * pool.length)]);
+  buildAlpana();
+}
+document.querySelectorAll('#scene-alpana .mini-tab').forEach(function(tab) {
+  tab.addEventListener('click', function () {
+    document.querySelectorAll('#scene-alpana .mini-tab').forEach(function(t) { t.classList.remove('active'); });
+    this.classList.add('active');
+    currentPattern = this.dataset.pattern;
+    buildAlpana();
+  });
+});
+buildAlpana();
+console.log("Alpana built.");
+const dhaakEl = document.getElementById('dhaak');
+const rippleEl = document.getElementById('ripple');
+const stickL = document.getElementById('stickL');
+const stickR = document.getElementById('stickR');
+const dhaakHint = document.getElementById('dhaakHint');
+let currentBeat = 'aarti';
+let dhaakLoopInterval = null;
+let dhaakAutoStopTimeout = null;
+let dhaakPlaying = false;
+document.querySelectorAll('.beat-btn').forEach(function(btn) {
+  btn.addEventListener('click', function () {
+    document.querySelectorAll('.beat-btn').forEach(function(b) { b.classList.remove('active'); });
+    this.classList.add('active');
+    currentBeat = this.dataset.beat;
+  });
+});
+const dhaakDefaults = { volume: 0.85, pitch: 1, treble: 3000, echo: 0.15, reverb: 0.2 };
+let audioCtx, trebleFilter, delayNode, feedbackGain, volumeGain, reverbConvolver, reverbWetGain;
+let currentPitch = dhaakDefaults.pitch;
+function createReverbImpulse(ctx, durationSeconds, decayPower) {
+  const sampleRate = ctx.sampleRate;
+  const length = sampleRate * durationSeconds;
+  const impulse = ctx.createBuffer(2, length, sampleRate);
+  for (let channel = 0; channel < 2; channel++) {
+    const channelData = impulse.getChannelData(channel);
+    for (let i = 0; i < length; i++) {
+      channelData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decayPower);
+    }
+  }
+  return impulse;
+}
+function initAudioGraph() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  trebleFilter = audioCtx.createBiquadFilter();
+  trebleFilter.type = 'highshelf';
+  trebleFilter.frequency.value = parseFloat(document.getElementById('trebleSlider').value);
+  trebleFilter.gain.value = 6;
+  volumeGain = audioCtx.createGain();
+  volumeGain.gain.value = parseFloat(document.getElementById('volumeSlider').value);
+  delayNode = audioCtx.createDelay();
+  delayNode.delayTime.value = 0.18;
+  feedbackGain = audioCtx.createGain();
+  feedbackGain.gain.value = parseFloat(document.getElementById('echoSlider').value);
+  delayNode.connect(feedbackGain);
+  feedbackGain.connect(delayNode);
+  reverbConvolver = audioCtx.createConvolver();
+  reverbConvolver.buffer = createReverbImpulse(audioCtx, 1.5, 2.5);
+  reverbWetGain = audioCtx.createGain();
+  reverbWetGain.gain.value = parseFloat(document.getElementById('reverbSlider').value);
+  trebleFilter.connect(volumeGain);
+  volumeGain.connect(delayNode);
+  volumeGain.connect(audioCtx.destination);
+  delayNode.connect(audioCtx.destination);
+  trebleFilter.connect(reverbWetGain);
+  reverbWetGain.connect(reverbConvolver);
+  reverbConvolver.connect(audioCtx.destination);
+}
+function bindSliderDisplay(sliderId, displayId, formatter) {
+  const slider = document.getElementById(sliderId);
+  const display = document.getElementById(displayId);
+  display.textContent = formatter(slider.value);
+  slider.addEventListener('input', function (e) { display.textContent = formatter(e.target.value); });
+}
+bindSliderDisplay('volumeSlider', 'volumeVal', function(v) { return Math.round(v * 100) + '%'; });
+bindSliderDisplay('pitchSlider', 'pitchVal', function(v) { return parseFloat(v).toFixed(1) + 'x'; });
+bindSliderDisplay('trebleSlider', 'trebleVal', function(v) { return v; });
+bindSliderDisplay('echoSlider', 'echoVal', function(v) { return parseFloat(v).toFixed(2); });
+bindSliderDisplay('reverbSlider', 'reverbVal', function(v) { return Math.round(v * 100) + '%'; });
+document.getElementById('volumeSlider').addEventListener('input', function(e) { if (volumeGain) volumeGain.gain.value = parseFloat(e.target.value); });
+document.getElementById('pitchSlider').addEventListener('input', function(e) { currentPitch = parseFloat(e.target.value); });
+document.getElementById('trebleSlider').addEventListener('input', function(e) { if (trebleFilter) trebleFilter.frequency.value = parseFloat(e.target.value); });
+document.getElementById('echoSlider').addEventListener('input', function(e) { if (feedbackGain) feedbackGain.gain.value = parseFloat(e.target.value); });
+document.getElementById('reverbSlider').addEventListener('input', function(e) { if (reverbWetGain) reverbWetGain.gain.value = parseFloat(e.target.value); });
+function resetDhaakControls() {
+  document.getElementById('volumeSlider').value = dhaakDefaults.volume;
+  document.getElementById('pitchSlider').value = dhaakDefaults.pitch;
+  document.getElementById('trebleSlider').value = dhaakDefaults.treble;
+  document.getElementById('echoSlider').value = dhaakDefaults.echo;
+  document.getElementById('reverbSlider').value = dhaakDefaults.reverb;
+  document.getElementById('volumeVal').textContent = Math.round(dhaakDefaults.volume * 100) + '%';
+  document.getElementById('pitchVal').textContent = dhaakDefaults.pitch.toFixed(1) + 'x';
+  document.getElementById('trebleVal').textContent = dhaakDefaults.treble;
+  document.getElementById('echoVal').textContent = dhaakDefaults.echo.toFixed(2);
+  document.getElementById('reverbVal').textContent = Math.round(dhaakDefaults.reverb * 100) + '%';
+  currentPitch = dhaakDefaults.pitch;
+  if (volumeGain) volumeGain.gain.value = dhaakDefaults.volume;
+  if (trebleFilter) trebleFilter.frequency.value = dhaakDefaults.treble;
+  if (feedbackGain) feedbackGain.gain.value = dhaakDefaults.echo;
+  if (reverbWetGain) reverbWetGain.gain.value = dhaakDefaults.reverb;
+}
+const beatProfiles = {
+  aarti:    { hits: [{ freq: 150, decay: 0.18, delay: 0 }], loopMs: 480 },
+  dhunuchi: { hits: [{ freq: 170, decay: 0.1, delay: 0 }, { freq: 170, decay: 0.1, delay: 0.12 }], loopMs: 480 },
+  bisorjon: { hits: [{ freq: 130, decay: 0.35, delay: 0 }], loopMs: 820 }
+};
+function playBeatOnce() {
+  initAudioGraph();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const profile = beatProfiles[currentBeat];
+  profile.hits.forEach(function(hit) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle';
+    const t0 = audioCtx.currentTime + hit.delay;
+    const pitchedFreq = hit.freq * currentPitch;
+    osc.frequency.setValueAtTime(pitchedFreq, t0);
+    osc.frequency.exponentialRampToValueAtTime(pitchedFreq * 0.55, t0 + hit.decay);
+    gain.gain.setValueAtTime(0.85, t0);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + hit.decay);
+    osc.connect(gain);
+    gain.connect(trebleFilter);
+    osc.start(t0);
+    osc.stop(t0 + hit.decay + 0.05);
+  });
+  stickL.classList.add('hit'); stickR.classList.add('hit');
+  rippleEl.classList.remove('animate'); void rippleEl.offsetWidth; rippleEl.classList.add('animate');
+  setTimeout(function() { stickL.classList.remove('hit'); stickR.classList.remove('hit'); }, 130);
+}
+function startDhaakLoop() {
+  playBeatOnce();
+  dhaakLoopInterval = setInterval(playBeatOnce, beatProfiles[currentBeat].loopMs);
+  dhaakAutoStopTimeout = setTimeout(stopDhaakLoop, 60000);
+  dhaakPlaying = true;
+  dhaakEl.classList.add('playing');
+  dhaakHint.textContent = 'playing - click to stop early (auto-stops after 1 minute)';
+}
+function stopDhaakLoop() {
+  if (dhaakLoopInterval) { clearInterval(dhaakLoopInterval); dhaakLoopInterval = null; }
+  if (dhaakAutoStopTimeout) { clearTimeout(dhaakAutoStopTimeout); dhaakAutoStopTimeout = null; }
+  dhaakPlaying = false;
+  dhaakEl.classList.remove('playing');
+  dhaakHint.textContent = 'click once - it plays for a full minute. Click again to stop early.';
+}
+dhaakEl.addEventListener('click', function () { if (dhaakPlaying) stopDhaakLoop(); else startDhaakLoop(); });
+console.log("Dhaak set up.");
+const lightsRow = document.getElementById('lightsRow');
+const colorPalettes = {
+  gold: ['#FFD24C'], red: ['#FF5A5A'], blue: ['#5AB8FF'], green: ['#6EE07A'],
+  multi: ['#FFD24C', '#FF5A5A', '#5AB8FF', '#6EE07A', '#C77DFF']
+};
+let currentLightColor = 'gold';
+let currentLightPattern = 'steady';
+const NUM_BULBS = 14;
+function buildLightsRow() {
+  lightsRow.innerHTML = "";
+  lightsRow.className = 'lights-row';
+  if (currentLightPattern === 'chase') lightsRow.classList.add('chase');
+  if (currentLightPattern === 'twinkle') lightsRow.classList.add('twinkle');
+  const palette = colorPalettes[currentLightColor];
+  for (let i = 0; i < NUM_BULBS; i++) {
+    const bulb = document.createElement('div');
+    bulb.className = 'bulb';
+    const color = palette[i % palette.length];
+    bulb.style.background = color;
+    bulb.style.color = color;
+    bulb.style.boxShadow = '0 0 12px 4px ' + hexToRgba(color, 0.8);
+    if (currentLightPattern === 'chase') {
+      bulb.style.animationDelay = (i * (1.2 / NUM_BULBS)) + 's';
+    } else if (currentLightPattern === 'twinkle') {
+      bulb.style.animationDelay = (Math.random() * 1.6).toFixed(2) + 's';
+      bulb.style.animationDuration = (1.1 + Math.random() * 1.0).toFixed(2) + 's';
+    } else {
+      bulb.style.animationDelay = '0s';
+    }
+    lightsRow.appendChild(bulb);
+  }
+  if (currentLightPattern === 'wave') applyWavePattern();
+  if (currentLightPattern === 'alternate') applyAlternatePattern();
+}
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+}
+let wavePatternTimer = null;
+function applyWavePattern() {
+  const bulbs = lightsRow.querySelectorAll('.bulb');
+  let step = 0;
+  wavePatternTimer = setInterval(function() {
+    bulbs.forEach(function(bulb, i) {
+      const distance = Math.abs(i - step);
+      const brightness = Math.max(0.15, 1 - distance * 0.3);
+      bulb.style.opacity = brightness;
+    });
+    step = (step + 1) % bulbs.length;
+  }, 150);
+}
+let alternatePatternTimer = null;
+function applyAlternatePattern() {
+  const bulbs = lightsRow.querySelectorAll('.bulb');
+  let flip = false;
+  alternatePatternTimer = setInterval(function() {
+    bulbs.forEach(function(bulb, i) {
+      const isEven = (i % 2 === 0);
+      bulb.style.opacity = (isEven === flip) ? 1 : 0.25;
+    });
+    flip = !flip;
+  }, 500);
+}
+function clearDynamicLightTimers() {
+  if (wavePatternTimer) { clearInterval(wavePatternTimer); wavePatternTimer = null; }
+  if (alternatePatternTimer) { clearInterval(alternatePatternTimer); alternatePatternTimer = null; }
+}
+function clearInlineBulbOpacity() {
+  lightsRow.querySelectorAll('.bulb').forEach(function(bulb) { bulb.style.opacity = ''; });
+}
+document.querySelectorAll('.color-btn').forEach(function(btn) {
+  btn.addEventListener('click', function () {
+    document.querySelectorAll('.color-btn').forEach(function(b) { b.classList.remove('active'); });
+    this.classList.add('active');
+    currentLightColor = this.dataset.color;
+    clearDynamicLightTimers();
+    buildLightsRow();
+  });
+});
+document.querySelectorAll('.light-pattern-btn').forEach(function(btn) {
+  btn.addEventListener('click', function () {
+    document.querySelectorAll('.light-pattern-btn').forEach(function(b) { b.classList.remove('active'); });
+    this.classList.add('active');
+    currentLightPattern = this.dataset.light;
+    clearDynamicLightTimers();
+    clearInlineBulbOpacity();
+    buildLightsRow();
+  });
+});
+buildLightsRow();
+console.log("Lights set up.");
+const dancerGroupWrap = document.getElementById('dancerGroupWrap');
+const playPauseBtn = document.getElementById('playPauseBtn');
+const flourishBtn = document.getElementById('flourishBtn');
+const dancerStatus = document.getElementById('dancerStatus');
+const tempoSettings = {
+  slow:   { swayAnim: 'swayDanceSlow 2.2s ease-in-out infinite', noteIntervalMs: 700 },
+  medium: { swayAnim: 'swayDanceMedium 1.4s ease-in-out infinite', noteIntervalMs: 480 },
+  fast:   { swayAnim: 'swayDanceFast 0.9s ease-in-out infinite', noteIntervalMs: 320 }
+};
+const melodyNotes = [196, 220, 247, 220, 262, 220];
+let melodyIndex = 0;
+let currentTempo = 'medium';
+let isDancing = false;
+let musicTimer = null;
+let danceAudioCtx = null;
+document.querySelectorAll('.tempo-btn').forEach(function(btn) {
+  btn.addEventListener('click', function () {
+    document.querySelectorAll('.tempo-btn').forEach(function(b) { b.classList.remove('active'); });
+    this.classList.add('active');
+    currentTempo = this.dataset.tempo;
+    if (isDancing) { stopDance(); startDance(); }
+  });
+});
+function puffSmokeAtHand() {
+  for (let i = 0; i < 2; i++) {
+    const smoke = document.createElement('div');
+    smoke.className = 'smoke-puff';
+    smoke.textContent = '~';
+    smoke.style.left = (155 + Math.random() * 14 - 7) + 'px';
+    smoke.style.top = (28 + Math.random() * 6) + 'px';
+    document.getElementById('dancerStage').appendChild(smoke);
+    smoke.style.transition = 'all 1.1s ease-out';
+    requestAnimationFrame(function() {
+      smoke.style.opacity = '0.85';
+      smoke.style.transform = 'translate(' + (Math.random()*26-13) + 'px, -75px) rotate(' + (Math.random()*30-15) + 'deg)';
+      setTimeout(function() { smoke.style.opacity = '0'; }, 650);
+    });
+    setTimeout(function() { smoke.remove(); }, 1300);
+  }
+}
+function playMelodyNote(freq, loud) {
+  if (!danceAudioCtx) danceAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (danceAudioCtx.state === 'suspended') danceAudioCtx.resume();
+  const osc = danceAudioCtx.createOscillator();
+  const gain = danceAudioCtx.createGain();
+  osc.type = 'triangle';
+  const t0 = danceAudioCtx.currentTime;
+  osc.frequency.setValueAtTime(freq, t0);
+  gain.gain.setValueAtTime(loud ? 0.4 : 0.25, t0);
+  gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.28);
+  osc.connect(gain);
+  gain.connect(danceAudioCtx.destination);
+  osc.start(t0);
+  osc.stop(t0 + 0.3);
+}
+function startDance() {
+  const settings = tempoSettings[currentTempo];
+  dancerGroupWrap.style.animation = settings.swayAnim;
+  musicTimer = setInterval(function() {
+    const freq = melodyNotes[melodyIndex % melodyNotes.length];
+    melodyIndex++;
+    playMelodyNote(freq, false);
+    if (melodyIndex % 2 === 0) puffSmokeAtHand();
+  }, settings.noteIntervalMs);
+  isDancing = true;
+  playPauseBtn.textContent = 'Pause';
+  dancerStatus.textContent = 'Dancing - music, smoke, and sway are synced.';
+}
+function stopDance() {
+  dancerGroupWrap.style.animation = '';
+  if (musicTimer) { clearInterval(musicTimer); musicTimer = null; }
+  isDancing = false;
+  playPauseBtn.textContent = 'Play Dhunuchi Naach';
+  dancerStatus.textContent = 'Paused. Press play to continue.';
+}
+playPauseBtn.addEventListener('click', function () { if (isDancing) stopDance(); else startDance(); });
+flourishBtn.addEventListener('click', function () {
+  puffSmokeAtHand(); puffSmokeAtHand();
+  playMelodyNote(melodyNotes[melodyIndex % melodyNotes.length] * 1.3, true);
+  const wasDancing = isDancing;
+  const resumeAnim = wasDancing ? tempoSettings[currentTempo].swayAnim : '';
+  dancerGroupWrap.style.animation = 'flourishKick 0.4s ease 1';
+  setTimeout(function() { dancerGroupWrap.style.animation = resumeAnim; }, 400);
+});
+console.log("Dhunuchi naach set up.");
+
+const ALL_PANDALS = [
+    {name:'Santosh Mitra Square', city:'Kolkata', state:'West Bengal', zone:'Central', district:'', group:'Kolkata – Central', lat:22.5636, lon:88.3512},
+    {name:'Sreebhumi Sporting Club', city:'Kolkata', state:'West Bengal', zone:'Salt Lake/East', district:'', group:'Kolkata – Salt Lake / East', lat:22.6038, lon:88.3791},
+    {name:'Arjunpur Amra Sobai', city:'Kolkata', state:'West Bengal', zone:'North', district:'', group:'Kolkata – North', lat:22.6186, lon:88.4203},
+    {name:'Jagat Mukherjee Park', city:'Kolkata', state:'West Bengal', zone:'North', district:'', group:'Kolkata – North', lat:22.5958, lon:88.3639},
+    {name:'Chorebagan Sarbojanin', city:'Kolkata', state:'West Bengal', zone:'North', district:'', group:'Kolkata – North', lat:22.5955, lon:88.3642},
+    {name:'Tridhara Akalbodhon / Sammilani', city:'Kolkata', state:'West Bengal', zone:'South', district:'', group:'Kolkata – South', lat:22.5167, lon:88.346},
+    {name:'Behala Notun Dol', city:'Kolkata', state:'West Bengal', zone:'South', district:'', group:'Kolkata – South', lat:22.4953, lon:88.3139},
+    {name:'SB Park Thakurpukur', city:'Kolkata', state:'West Bengal', zone:'South', district:'', group:'Kolkata – South', lat:22.4584, lon:88.327},
+    {name:'Kendua Shanti Sangha', city:'Kolkata', state:'West Bengal', zone:'South', district:'', group:'Kolkata – South', lat:22.4701, lon:88.3697},
+    {name:'Kashi Bose Lane', city:'Kolkata', state:'West Bengal', zone:'North', district:'', group:'Kolkata – North', lat:22.5961, lon:88.3645},
+    {name:'Chetla Agrani Club', city:'Kolkata', state:'West Bengal', zone:'South', district:'', group:'Kolkata – South', lat:22.513, lon:88.338},
+    {name:'Ekdalia Evergreen Club', city:'Kolkata', state:'West Bengal', zone:'South', district:'', group:'Kolkata – South', lat:22.519, lon:88.363},
+    {name:'Deshapriya Park', city:'Kolkata', state:'West Bengal', zone:'South', district:'', group:'Kolkata – South', lat:22.5178, lon:88.3568},
+    {name:'Md. Ali Park', city:'Kolkata', state:'West Bengal', zone:'Central', district:'', group:'Kolkata – Central', lat:22.568, lon:88.36},
+    {name:'Suruchi Sangha', city:'Kolkata', state:'West Bengal', zone:'South', district:'', group:'Kolkata – South', lat:22.5057, lon:88.3452},
+    {name:'Badamtala Ashar Sangha', city:'Kolkata', state:'West Bengal', zone:'South', district:'', group:'Kolkata – South', lat:22.5145, lon:88.3505},
+    {name:'Mudiali Club', city:'Kolkata', state:'West Bengal', zone:'South', district:'', group:'Kolkata – South', lat:22.505, lon:88.34},
+    {name:'Ahiritola Sarbojanin', city:'Kolkata', state:'West Bengal', zone:'North', district:'', group:'Kolkata – North', lat:22.597, lon:88.3625},
+    {name:'College Square', city:'Kolkata', state:'West Bengal', zone:'Central', district:'', group:'Kolkata – Central', lat:22.575, lon:88.363},
+    {name:'Naktala Udayan Sangha', city:'Kolkata', state:'West Bengal', zone:'South', district:'', group:'Kolkata – South', lat:22.478, lon:88.363},
+    {name:'Ballygunge Cultural Association', city:'Kolkata', state:'West Bengal', zone:'South', district:'', group:'Kolkata – South', lat:22.524, lon:88.366},
+    {name:'Jodhpur Park', city:'Kolkata', state:'West Bengal', zone:'South', district:'', group:'Kolkata – South', lat:22.504, lon:88.36},
+    {name:'Salkia 61 Pally Sarbojanin', city:'Howrah', state:'West Bengal', zone:'Howrah', district:'', group:'Howrah', lat:22.5804, lon:88.3433},
+    {name:'Kumartuli Park', city:'Kolkata', state:'West Bengal', zone:'North', district:'', group:'Kolkata – North', lat:22.599, lon:88.361},
+    {name:'Bagbazar Sarbojanin', city:'Kolkata', state:'West Bengal', zone:'North', district:'', group:'Kolkata – North', lat:22.601, lon:88.366},
+    {name:'Salt Lake FD Block', city:'Kolkata', state:'West Bengal', zone:'Salt Lake/East', district:'', group:'Kolkata – Salt Lake / East', lat:22.5826, lon:88.4169},
+    {name:'Singhi Park', city:'Kolkata', state:'West Bengal', zone:'South', district:'', group:'Kolkata – South', lat:22.508, lon:88.355},
+    {name:'Dumdum Park Bharat Chakra', city:'Kolkata', state:'West Bengal', zone:'North', district:'', group:'Kolkata – North', lat:22.617, lon:88.419},
+    {name:'Barisha Club', city:'Kolkata', state:'West Bengal', zone:'South', district:'', group:'Kolkata – South', lat:22.49, lon:88.316},
+    {name:'Salt Lake AD Block', city:'Kolkata', state:'West Bengal', zone:'Salt Lake/East', district:'', group:'Kolkata – Salt Lake / East', lat:22.585, lon:88.415},
+    {name:'Sovabazar Rajbari', city:'Kolkata', state:'West Bengal', zone:'North', district:'', group:'Kolkata – North', lat:22.5985, lon:88.3615},
+    {name:'Hatibagan Sarbojanin', city:'Kolkata', state:'West Bengal', zone:'North', district:'', group:'Kolkata – North', lat:22.6, lon:88.37},
+    {name:'Chaltabagan Durga Puja', city:'Kolkata', state:'West Bengal', zone:'Central', district:'', group:'Kolkata – Central', lat:22.57, lon:88.365},
+    {name:'Nalin Sarkar Street Sarbojanin', city:'Kolkata', state:'West Bengal', zone:'North', district:'', group:'Kolkata – North', lat:22.5975, lon:88.36},
+    {name:'Belgachia Sarbojanin', city:'Kolkata', state:'West Bengal', zone:'North', district:'', group:'Kolkata – North', lat:22.6038, lon:88.3791},
+    {name:'Hirapur Durga Puja', city:'Asansol', state:'West Bengal', zone:'Industrial belt', district:'Paschim Bardhaman', group:'West Bengal – Other Districts', lat:23.6889, lon:86.9661},
+    {name:'City Center Durgapur', city:'Durgapur', state:'West Bengal', zone:'Industrial belt', district:'Paschim Bardhaman', group:'West Bengal – Other Districts', lat:23.5204, lon:87.3119},
+    {name:'Siliguri Central Pandals', city:'Siliguri', state:'West Bengal', zone:'North Bengal', district:'Darjeeling', group:'West Bengal – Other Districts', lat:26.7271, lon:88.3953},
+    {name:'Burdwan Town Pandals', city:'Burdwan', state:'West Bengal', zone:'Central WB', district:'Purba Bardhaman', group:'West Bengal – Other Districts', lat:23.2324, lon:87.8615},
+    {name:'Krishnanagar Pandals', city:'Krishnanagar', state:'West Bengal', zone:'Nadia district', district:'Nadia', group:'West Bengal – Other Districts', lat:23.4058, lon:88.502},
+    {name:'Chandannagar Light Pandals', city:'Chandannagar', state:'West Bengal', zone:'Hooghly district', district:'Hooghly', group:'West Bengal – Other Districts', lat:22.8679, lon:88.3772},
+    {name:'Malda Town Pandals', city:'Malda', state:'West Bengal', zone:'North WB', district:'Malda', group:'West Bengal – Other Districts', lat:25.0108, lon:88.1411},
+    {name:'Bolpur Pandals', city:'Bolpur', state:'West Bengal', zone:'Birbhum district', district:'Birbhum', group:'West Bengal – Other Districts', lat:23.67, lon:87.695},
+    {name:'Balurghat Pandals', city:'Balurghat', state:'West Bengal', zone:'South Dinajpur', district:'South Dinajpur', group:'West Bengal – Other Districts', lat:25.22, lon:88.77},
+    {name:'Kalyani Pandals', city:'Kalyani', state:'West Bengal', zone:'Nadia district', district:'Nadia', group:'West Bengal – Other Districts', lat:22.975, lon:88.435},
+    {name:'Mela Ground (K-Block Golden Jubilee)', city:'Delhi', state:'Delhi', zone:'CR Park', district:'', group:'Delhi NCR', lat:28.5355, lon:77.249},
+    {name:'Matri Mandir, Safdarjung Enclave', city:'Delhi', state:'Delhi', zone:'Safdarjung Enclave', district:'', group:'Delhi NCR', lat:28.568, lon:77.201},
+    {name:'B-Block CR Park', city:'Delhi', state:'Delhi', zone:'CR Park', district:'', group:'Delhi NCR', lat:28.5345, lon:77.25},
+    {name:'Mayur Vihar Kalibari', city:'Delhi', state:'Delhi', zone:'Mayur Vihar', district:'', group:'Delhi NCR', lat:28.609, lon:77.296},
+    {name:'Bombay Durgabari Samiti', city:'Mumbai', state:'Maharashtra', zone:'Mumbai', district:'', group:'Mumbai', lat:19.076, lon:72.8777},
+    {name:'The Bengal Club, Shivaji Park', city:'Mumbai', state:'Maharashtra', zone:'Shivaji Park', district:'', group:'Mumbai', lat:19.028, lon:72.84},
+    {name:'North Bombay Sarbojanin', city:'Mumbai', state:'Maharashtra', zone:'Mumbai', district:'', group:'Mumbai', lat:19.1197, lon:72.8468},
+    {name:'Bengalee Association, Ulsoor', city:'Bengaluru', state:'Karnataka', zone:'Ulsoor', district:'', group:'Bengaluru', lat:12.9815, lon:77.622},
+    {name:'E.I.S.H.A, HSR Layout', city:'Bengaluru', state:'Karnataka', zone:'HSR Layout', district:'', group:'Bengaluru', lat:12.912, lon:77.645},
+    {name:'Palace Grounds Socio-Cultural Trust', city:'Bengaluru', state:'Karnataka', zone:'Palace Grounds', district:'', group:'Bengaluru', lat:13.012, lon:77.59},
+    {name:'Chennai Bengali Association', city:'Chennai', state:'Tamil Nadu', zone:'Chennai', district:'', group:'Rest of India', lat:13.0827, lon:80.2707},
+    {name:'Bengalee Association Hyderabad', city:'Hyderabad', state:'Telangana', zone:'Hyderabad', district:'', group:'Rest of India', lat:17.385, lon:78.4867},
+    {name:'Prabasi Bengali Samiti Pune', city:'Pune', state:'Maharashtra', zone:'Pune', district:'', group:'Rest of India', lat:18.5204, lon:73.8567},
+    {name:'Ahmedabad Durgabari Samity', city:'Ahmedabad', state:'Gujarat', zone:'Ahmedabad', district:'', group:'Rest of India', lat:23.0225, lon:72.5714},
+    {name:'Jaipur Durgabari Samiti', city:'Jaipur', state:'Rajasthan', zone:'Jaipur', district:'', group:'Rest of India', lat:26.9124, lon:75.7873},
+    {name:'Lucknow Bengali Club', city:'Lucknow', state:'Uttar Pradesh', zone:'Lucknow', district:'', group:'Rest of India', lat:26.8467, lon:80.9462},
+    {name:'Patna Bengali Akhra', city:'Patna', state:'Bihar', zone:'Patna', district:'', group:'Rest of India', lat:25.5941, lon:85.1376},
+    {name:'Guwahati Durga Bari', city:'Guwahati', state:'Assam', zone:'Guwahati', district:'', group:'Rest of India', lat:26.1445, lon:91.7362},
+    {name:'Rasulgarh Durga Puja, Bhubaneswar', city:'Bhubaneswar', state:'Odisha', zone:'Bhubaneswar', district:'', group:'Rest of India', lat:20.2961, lon:85.8245},
+    {name:'Bistupur Durga Puja, Jamshedpur', city:'Jamshedpur', state:'Jharkhand', zone:'Jamshedpur', district:'', group:'Rest of India', lat:22.8046, lon:86.2029},
+    {name:'Ranchi Bengali Association', city:'Ranchi', state:'Jharkhand', zone:'Ranchi', district:'', group:'Rest of India', lat:23.3441, lon:85.3096}
+  ];
+const GROUP_ORDER = ['Kolkata – North','Kolkata – South','Kolkata – Central','Kolkata – Salt Lake / East','Howrah','West Bengal – Other Districts','Delhi NCR','Mumbai','Bengaluru','Rest of India'];
+
+const PUJA_DAYS = [
+  { key:'shashthi', label:'Shashthi', date:'Oct 16' },
+  { key:'saptami1', label:'Saptami (Day 1)', date:'Oct 17' },
+  { key:'saptami2', label:'Saptami (Day 2)', date:'Oct 18' },
+  { key:'ashtami', label:'Ashtami', date:'Oct 19' },
+  { key:'navami', label:'Navami', date:'Oct 20' },
+  { key:'dashami', label:'Dashami', date:'Oct 21' },
+  { key:'other', label:'Other / Not sure', date:'' }
+];
+const DAY_SHORT_BY_KEY = {};
+PUJA_DAYS.forEach(function(d){ DAY_SHORT_BY_KEY[d.key] = d.label; });
+
+function populateDayDropdown() {
+  const sel = document.getElementById('expDay');
+  sel.innerHTML = "";
+  PUJA_DAYS.forEach(function(d) {
+    const opt = document.createElement('option');
+    opt.value = d.key;
+    opt.textContent = d.date ? (d.label + ' - ' + d.date) : d.label;
+    sel.appendChild(opt);
+  });
+}
+populateDayDropdown();
+
+function populateExpPandalDropdown() {
+  const sel = document.getElementById('expPandal');
+  const prevVal = sel.value;
+  sel.innerHTML = "";
+  const byGroup = {};
+  ALL_PANDALS.forEach(function(p) { if (!byGroup[p.group]) byGroup[p.group] = []; byGroup[p.group].push(p); });
+  GROUP_ORDER.forEach(function(groupName) {
+    if (!byGroup[groupName]) return;
+    const group = document.createElement('optgroup');
+    group.label = groupName;
+    byGroup[groupName].sort(function(a,b){ return (a.district||'').localeCompare(b.district||'') || a.city.localeCompare(b.city) || a.name.localeCompare(b.name); })
+      .forEach(function(p) {
+        const opt = document.createElement('option');
+        let locationLabel;
+        if (groupName === 'West Bengal – Other Districts') { locationLabel = p.city + ', ' + p.district; }
+        else if (groupName === 'Rest of India') { locationLabel = p.city + ', ' + p.state; }
+        else { locationLabel = p.city; }
+        opt.value = p.name; opt.textContent = p.name + ' (' + locationLabel + ')';
+        group.appendChild(opt);
+      });
+    sel.appendChild(group);
+  });
+  const customOpt = document.createElement('option');
+  customOpt.value = '__other__';
+  customOpt.textContent = '+ Other / type my own pandal name';
+  sel.appendChild(customOpt);
+  if (prevVal) {
+    const match = Array.from(sel.options).some(function(o){ return o.value === prevVal; });
+    if (match) sel.value = prevVal;
+  }
+}
+populateExpPandalDropdown();
+document.getElementById('expPandal').addEventListener('change', function() {
+  const customInput = document.getElementById('customPandalName');
+  customInput.style.display = (this.value === '__other__') ? 'inline-block' : 'none';
+});
+
+let expenses = [];
+try {
+  const savedExp = localStorage.getItem('expenses');
+  expenses = savedExp ? JSON.parse(savedExp) : [];
+  expenses.forEach(function(e) { if (e.day === undefined) e.day = 'other'; });
+} catch (err) { expenses = []; }
+
+const categoryColors = {
+  "Clothes & Shopping": '#B01E28', "Food": '#D4A017', "Transport": '#8B5E3C',
+  "Chanda (Donation)": '#6B2737', "Puja Essentials": '#C9184A', "Gifts & Bijoya": '#777777',
+  "Miscellaneous": '#5A6B7A'
+};
+let pieChart = null;
+let barChart = null;
+let dayChart = null;
+const chartJsAvailable = (typeof Chart !== 'undefined');
+if (!chartJsAvailable) { console.warn("Chart.js did not load."); }
+const customColorPool = ['#5B8C5A', '#4A7A9E', '#A85C8C', '#C97B3D', '#6B5B95', '#3D8C8C'];
+let customColorIndex = 0;
+let customCategories = [];
+try {
+  const savedCustom = localStorage.getItem('customCategories');
+  customCategories = savedCustom ? JSON.parse(savedCustom) : [];
+} catch (err) { customCategories = []; }
+customCategories.forEach(function(cat) { categoryColors[cat.name] = cat.color; });
+function saveCustomCategories() {
+  try { localStorage.setItem('customCategories', JSON.stringify(customCategories)); } catch (err) {}
+}
+function refreshCategoryDropdown() {
+  const sel = document.getElementById('expCategory');
+  const currentVal = sel.value;
+  const fixedValues = ["Clothes & Shopping","Food","Transport","Chanda (Donation)","Puja Essentials","Gifts & Bijoya","Miscellaneous","__custom__"];
+  Array.from(sel.querySelectorAll('option')).forEach(function(opt) {
+    if (!fixedValues.includes(opt.value)) { sel.removeChild(opt); }
+  });
+  const addCustomOption = sel.querySelector('option[value="__custom__"]');
+  customCategories.forEach(function(cat) {
+    const opt = document.createElement('option');
+    opt.value = cat.name;
+    opt.textContent = cat.name;
+    sel.insertBefore(opt, addCustomOption);
+  });
+  if (fixedValues.includes(currentVal) || customCategories.some(function(c){ return c.name === currentVal; })) {
+    sel.value = currentVal;
+  }
+}
+refreshCategoryDropdown();
+function handleCategorySelectChange() {
+  const sel = document.getElementById('expCategory');
+  const customRow = document.getElementById('customCategoryRow');
+  customRow.style.display = (sel.value === '__custom__') ? 'flex' : 'none';
+}
+function addCustomCategory() {
+  const input = document.getElementById('newCategoryName');
+  const name = input.value.trim();
+  if (!name) { showBudgetMessage("Please type a category name first.", true); return; }
+  if (categoryColors[name]) { showBudgetMessage("That category already exists.", true); return; }
+  const color = customColorPool[customColorIndex % customColorPool.length];
+  customColorIndex++;
+  customCategories.push({ name: name, color: color });
+  categoryColors[name] = color;
+  saveCustomCategories();
+  refreshCategoryDropdown();
+  document.getElementById('expCategory').value = name;
+  document.getElementById('customCategoryRow').style.display = 'none';
+  input.value = "";
+  showBudgetMessage('"' + name + '" category added!', false);
+}
+function showBudgetMessage(msg, isError) {
+  const banner = document.getElementById('budgetDebugBanner');
+  banner.textContent = msg; banner.style.display = 'block';
+  banner.style.background = isError ? '#fde2e2' : '#e2fde6';
+  banner.style.borderColor = isError ? '#B01E28' : '#2e7d32';
+  setTimeout(function() { banner.style.display = 'none'; }, 3000);
+}
+function saveExpenses() { try { localStorage.setItem('expenses', JSON.stringify(expenses)); } catch (e) {} }
+
+let editingIndex = null;
+
+function toggleFormButtons(isEditing) {
+  document.getElementById('btnAddExpense').style.display = isEditing ? 'none' : 'inline-block';
+  document.getElementById('btnUpdateExpense').style.display = isEditing ? 'inline-block' : 'none';
+  document.getElementById('btnCancelEdit').style.display = isEditing ? 'inline-block' : 'none';
+}
+
+function addExpense() {
+  const pandalSel = document.getElementById('expPandal');
+  let pandalName = pandalSel.value;
+  if (pandalName === '__other__') { pandalName = document.getElementById('customPandalName').value.trim(); }
+  if (!pandalName) { showBudgetMessage("Please choose a pandal, or type one in.", true); return; }
+  const dayKey = document.getElementById('expDay').value;
+  const categorySel = document.getElementById('expCategory');
+  const category = categorySel.value;
+  if (category === '__custom__') { showBudgetMessage("Please finish adding your custom category first.", true); return; }
+  const amountRaw = document.getElementById('expAmount').value;
+  const amount = parseFloat(amountRaw);
+  if (!amountRaw || isNaN(amount) || amount <= 0) { showBudgetMessage("Please enter a valid amount.", true); return; }
+
+  const newEntry = { pandal: pandalName, category: category, amount: amount, day: dayKey };
+
+  if (editingIndex !== null) {
+    expenses[editingIndex] = newEntry;
+    editingIndex = null;
+    document.getElementById('editingBanner').classList.remove('show');
+    toggleFormButtons(false);
+    showBudgetMessage("Expense updated!", false);
+  } else {
+    expenses.push(newEntry);
+    showBudgetMessage("Rs " + amount + " added on " + DAY_SHORT_BY_KEY[dayKey] + "!", false);
+  }
+  saveExpenses();
+  document.getElementById('expAmount').value = "";
+  renderBudget();
+}
+
+function editExpense(idx) {
+  const e = expenses[idx];
+  if (!e) return;
+  const pandalSel = document.getElementById('expPandal');
+  const hasOption = Array.from(pandalSel.options).some(function(o){ return o.value === e.pandal; });
+  if (hasOption) {
+    pandalSel.value = e.pandal;
+    document.getElementById('customPandalName').style.display = 'none';
+  } else {
+    pandalSel.value = '__other__';
+    document.getElementById('customPandalName').style.display = 'inline-block';
+    document.getElementById('customPandalName').value = e.pandal;
+  }
+  document.getElementById('expDay').value = e.day || 'other';
+  const catSel = document.getElementById('expCategory');
+  const catHasOption = Array.from(catSel.options).some(function(o){ return o.value === e.category; });
+  if (catHasOption) { catSel.value = e.category; }
+  document.getElementById('expAmount').value = e.amount;
+  editingIndex = idx;
+  document.getElementById('editingBanner').classList.add('show');
+  toggleFormButtons(true);
+  const formTop = document.querySelector('.budget-form').getBoundingClientRect().top + window.scrollY - 100;
+  window.scrollTo({ top: formTop, behavior: 'smooth' });
+}
+
+function cancelEdit() {
+  editingIndex = null;
+  document.getElementById('editingBanner').classList.remove('show');
+  document.getElementById('expAmount').value = "";
+  toggleFormButtons(false);
+  showBudgetMessage("Edit cancelled - no changes made.", false);
+}
+
+function deleteExpense(idx) {
+  if (!confirm("Delete this expense entry? This cannot be undone.")) return;
+  expenses.splice(idx, 1);
+  if (editingIndex === idx) { cancelEdit(); }
+  saveExpenses();
+  renderBudget();
+  showBudgetMessage("Expense deleted.", false);
+}
+
+function renderExpenseTable() {
+  const wrap = document.getElementById('expenseTableWrap');
+  if (expenses.length === 0) {
+    wrap.innerHTML = '<p class="expense-empty">No expenses logged yet - add one above.</p>';
+    return;
+  }
+  let html = '<table class="expense-table"><tr><th>Pandal</th><th>Category</th><th>Day</th><th>Amount</th><th></th></tr>';
+  expenses.forEach(function(e, idx) {
+    html += '<tr><td>' + e.pandal + '</td><td>' + e.category + '</td><td>' + DAY_SHORT_BY_KEY[e.day || 'other'] + '</td>' +
+      '<td class="et-amount">Rs ' + e.amount.toLocaleString() + '</td>' +
+      '<td class="et-actions">' +
+      '<button class="et-btn et-edit" onclick="editExpense(' + idx + ')">Edit</button>' +
+      '<button class="et-btn et-delete" onclick="deleteExpense(' + idx + ')">Delete</button>' +
+      '</td></tr>';
+  });
+  html += '</table>';
+  wrap.innerHTML = html;
+}
+
+function renderBudget() {
+  const total = expenses.reduce(function(sum, e) { return sum + e.amount; }, 0);
+  document.getElementById('totalDisplay').textContent = "Total spent: Rs " + total.toLocaleString();
+  const breakdown = document.getElementById('categoryBreakdown'); breakdown.innerHTML = "";
+  const catTotals = {};
+  Object.keys(categoryColors).forEach(function(cat) {
+    const catTotal = expenses.filter(function(e) { return e.category === cat; }).reduce(function(sum, e) { return sum + e.amount; }, 0);
+    catTotals[cat] = catTotal;
+    const pct = total ? Math.round((catTotal / total) * 100) : 0;
+    const row = document.createElement('div'); row.className = 'category-row';
+    row.innerHTML = '<div class="category-label"><span>' + cat + '</span><span>Rs ' + catTotal.toLocaleString() + ' (' + pct + '%)</span></div>' +
+      '<div class="cat-bar-outer"><div class="cat-bar-inner" style="width:' + pct + '%; background:' + categoryColors[cat] + '"></div></div>';
+    breakdown.appendChild(row);
+  });
+  renderExpenseTable();
+  if (chartJsAvailable) {
+    try {
+      const chartOpts = { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 12 } } } };
+      const pieCtx = document.getElementById('pieChart');
+      const pieLabels = Object.keys(catTotals).filter(function(k) { return catTotals[k] > 0; });
+      const pieData = pieLabels.map(function(k) { return catTotals[k]; });
+      const pieColors = pieLabels.map(function(k) { return categoryColors[k]; });
+      if (pieChart) pieChart.destroy();
+      pieChart = new Chart(pieCtx, { type: 'pie', data: { labels: pieLabels, datasets: [{ data: pieData, backgroundColor: pieColors }] }, options: chartOpts });
+
+      const pandalTotals = {};
+      expenses.forEach(function(e) { pandalTotals[e.pandal] = (pandalTotals[e.pandal] || 0) + e.amount; });
+      const barLabels = Object.keys(pandalTotals);
+      const barData = barLabels.map(function(k) { return pandalTotals[k]; });
+      const barCtx = document.getElementById('barChart');
+      if (barChart) barChart.destroy();
+      barChart = new Chart(barCtx, { type: 'bar', data: { labels: barLabels, datasets: [{ label: 'Spend (Rs)', data: barData, backgroundColor: '#B01E28' }] }, options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { font: { size: 9 } } } } } });
+
+      const dayTotals = {};
+      PUJA_DAYS.forEach(function(d) { dayTotals[d.key] = 0; });
+      expenses.forEach(function(e) { const k = e.day || 'other'; dayTotals[k] = (dayTotals[k] || 0) + e.amount; });
+      const dayKeysWithSpend = PUJA_DAYS.map(function(d){return d.key;}).filter(function(k){ return dayTotals[k] > 0; });
+      const dayLabels = dayKeysWithSpend.map(function(k) { return DAY_SHORT_BY_KEY[k]; });
+      const dayData = dayKeysWithSpend.map(function(k) { return dayTotals[k]; });
+      const dayCtx = document.getElementById('dayChart');
+      if (dayChart) dayChart.destroy();
+      dayChart = new Chart(dayCtx, { type: 'bar', data: { labels: dayLabels, datasets: [{ label: 'Spend (Rs)', data: dayData, backgroundColor: '#D4A017' }] }, options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { font: { size: 9 } } } } } });
+    } catch (chartErr) {
+      document.getElementById('pieChartWrap').innerHTML = '<p class="chart-fallback">Chart unavailable right now.</p>';
+      document.getElementById('barChartWrap').innerHTML = '<p class="chart-fallback">Chart unavailable right now.</p>';
+      document.getElementById('dayChartWrap').innerHTML = '<p class="chart-fallback">Chart unavailable right now.</p>';
+    }
+  } else {
+    document.getElementById('pieChartWrap').innerHTML = '<p class="chart-fallback">Charts need an internet connection to load.</p>';
+    document.getElementById('barChartWrap').innerHTML = '<p class="chart-fallback">Charts need an internet connection to load.</p>';
+    document.getElementById('dayChartWrap').innerHTML = '<p class="chart-fallback">Charts need an internet connection to load.</p>';
+  }
+  renderLiveMap();
+}
+function exportExpensesCSV() {
+  let csv = "Pandal,Category,Amount (INR),Puja Day\n";
+  expenses.forEach(function(e) { csv += '"' + e.pandal + '","' + e.category + '",' + e.amount + ',"' + DAY_SHORT_BY_KEY[e.day || 'other'] + '"\n'; });
+  downloadCSV(csv, 'my_puja_expenses.csv');
+}
+function downloadCSV(csvContent, filename) {
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url; link.download = filename;
+  document.body.appendChild(link); link.click();
+  document.body.removeChild(link); URL.revokeObjectURL(url);
+}
+
+let liveMapView = 'india';
+const INDIA_BOUNDS = { latMin: 11.5, latMax: 29.5, lonMin: 71.5, lonMax: 93.0 };
+const KOLKATA_BOUNDS = { latMin: 22.42, latMax: 22.65, lonMin: 88.28, lonMax: 88.45 };
+function projectLatLon(lat, lon, bounds, svgW, svgH, pad) {
+  const xFrac = (lon - bounds.lonMin) / (bounds.lonMax - bounds.lonMin || 1);
+  const yFrac = (bounds.latMax - lat) / (bounds.latMax - bounds.latMin || 1);
+  return { x: pad + xFrac * (svgW - 2 * pad), y: pad + yFrac * (svgH - 2 * pad) };
+}
+function getVisitedPandalNamesSet() {
+  const s = new Set();
+  expenses.forEach(function(e) { s.add(e.pandal); });
+  return s;
+}
+function closeLiveMapTooltip() {
+  const tip = document.getElementById('liveMapTooltip');
+  tip.classList.remove('open');
+  tip.innerHTML = "";
+}
+function showLiveMapTooltip(p, visited) {
+  const tip = document.getElementById('liveMapTooltip');
+  const relevant = expenses.filter(function(e) { return e.pandal === p.name; });
+  const spendHere = relevant.reduce(function(sum, e) { return sum + e.amount; }, 0);
+  const daysHere = Array.from(new Set(relevant.map(function(e){ return DAY_SHORT_BY_KEY[e.day || 'other']; })));
+  tip.innerHTML = '<span class="close-x" onclick="closeLiveMapTooltip()">x</span>' +
+    '<strong style="color:var(--red);">' + p.name + '</strong> - ' + p.city + '<br>' +
+    (visited ? '<span style="color:var(--gold); font-weight:bold;">Rs ' + spendHere.toLocaleString() + '</span> on ' + daysHere.join(', ')
+             : '<span style="color:#999;">No expenses logged here yet</span>');
+  tip.classList.add('open');
+}
+function renderLiveMap() {
+  const wrap = document.getElementById('liveMapSvgWrap');
+  const noteEl = document.getElementById('liveMapNote');
+  if (!wrap || !noteEl) return;
+  const visitedNames = getVisitedPandalNamesSet();
+  const bounds = liveMapView === 'india' ? INDIA_BOUNDS : KOLKATA_BOUNDS;
+  const svgW = 640;
+  const svgH = liveMapView === 'india' ? 380 : 320;
+  const pad = 24;
+  const visiblePandals = liveMapView === 'kolkata'
+    ? ALL_PANDALS.filter(function(p) { return p.group.indexOf('Kolkata') === 0 || p.group === 'Howrah'; })
+    : ALL_PANDALS;
+  let svgParts = [];
+  svgParts.push('<svg width="' + svgW + '" height="' + svgH + '" viewBox="0 0 ' + svgW + ' ' + svgH + '" style="background:#fbf3df; border-radius:6px; max-width:100%;">');
+  let visitedCount = 0;
+  visiblePandals.forEach(function(p) {
+    const visited = visitedNames.has(p.name);
+    if (visited) visitedCount++;
+    const pt = projectLatLon(p.lat, p.lon, bounds, svgW, svgH, pad);
+    const idx = ALL_PANDALS.indexOf(p);
+    const fill = visited ? '#D4A017' : '#bbb';
+    const r = visited ? 6.5 : 4;
+    const opacity = visited ? 0.95 : 0.5;
+    const glow = visited ? ' style="filter:drop-shadow(0 0 4px rgba(212,160,23,0.9));"' : '';
+    svgParts.push('<circle class="livemap-pin" cx="' + pt.x.toFixed(1) + '" cy="' + pt.y.toFixed(1) + '" r="' + r +
+      '" fill="' + fill + '" stroke="white" stroke-width="1" opacity="' + opacity + '"' + glow +
+      ' onclick="showLiveMapTooltip(ALL_PANDALS[' + idx + '],' + visited + ')"><title>' + p.name + '</title></circle>');
+  });
+  svgParts.push('</svg>');
+  wrap.innerHTML = svgParts.join('');
+  noteEl.textContent = visitedCount + ' of ' + visiblePandals.length + ' pandals logged' + (liveMapView === 'kolkata' ? ' (Kolkata/Howrah)' : ' (All India)') + '.';
+}
+document.querySelectorAll('.livemap-tab').forEach(function(tab) {
+  tab.addEventListener('click', function () {
+    document.querySelectorAll('.livemap-tab').forEach(function(t) { t.classList.remove('active'); });
+    this.classList.add('active');
+    liveMapView = this.dataset.view;
+    closeLiveMapTooltip();
+    renderLiveMap();
+  });
+});
+
+renderBudget();
+console.log("Expense tracker + Puja Day tracking set up with", ALL_PANDALS.length, "pandals.");
+
+function showSessionMessage(msg, isError) {
+  const banner = document.getElementById('sessionDebugBanner');
+  banner.textContent = msg; banner.style.display = 'block';
+  banner.style.background = isError ? '#fde2e2' : '#e2fde6';
+  banner.style.borderColor = isError ? '#B01E28' : '#2e7d32';
+  setTimeout(function() { banner.style.display = 'none'; }, 4000);
+}
+function generateSessionCode() {
+  const sessionData = { expenses: expenses, customCategories: customCategories };
+  const jsonString = JSON.stringify(sessionData);
+  const sessionCode = btoa(unescape(encodeURIComponent(jsonString)));
+  document.getElementById('sessionCodeText').value = sessionCode;
+  document.getElementById('sessionCodeDisplay').style.display = 'block';
+  showSessionMessage("Session code generated. Copy it and save it somewhere safe.", false);
+}
+function copySessionCode() {
+  const textarea = document.getElementById('sessionCodeText');
+  textarea.select();
+  textarea.setSelectionRange(0, 99999);
+  try {
+    navigator.clipboard.writeText(textarea.value).then(function() {
+      showSessionMessage("Copied to clipboard!", false);
+    }).catch(function() {
+      document.execCommand('copy');
+      showSessionMessage("Copied to clipboard!", false);
+    });
+  } catch (err) {
+    document.execCommand('copy');
+    showSessionMessage("Copied to clipboard!", false);
+  }
+}
+function loadSessionCode() {
+  const inputBox = document.getElementById('sessionCodeInput');
+  const code = inputBox.value.trim();
+  if (!code) { showSessionMessage("Please paste a session code first.", true); return; }
+  try {
+    const jsonString = decodeURIComponent(escape(atob(code)));
+    const sessionData = JSON.parse(jsonString);
+    if (!sessionData || !Array.isArray(sessionData.expenses)) { throw new Error("Malformed session data."); }
+    expenses = sessionData.expenses;
+    expenses.forEach(function(e) { if (e.day === undefined) e.day = 'other'; });
+    customCategories = Array.isArray(sessionData.customCategories) ? sessionData.customCategories : [];
+    customCategories.forEach(function(cat) { categoryColors[cat.name] = cat.color; });
+    customColorIndex = customCategories.length;
+    cancelEdit();
+    saveExpenses();
+    saveCustomCategories();
+    refreshCategoryDropdown();
+    renderBudget();
+    inputBox.value = "";
+    showSessionMessage("Session loaded successfully!", false);
+  } catch (err) {
+    showSessionMessage("That code could not be read. Please check you copied the whole thing and try again.", true);
+    console.error("Session load error:", err);
+  }
+}
+
+function resetSession() {
+  if (!confirm("This will permanently delete ALL your logged expenses and custom categories on this device. Are you sure?")) return;
+  expenses = [];
+  customCategories = [];
+  customColorIndex = 0;
+  try { localStorage.removeItem('expenses'); } catch(e) {}
+  try { localStorage.removeItem('customCategories'); } catch(e) {}
+  const fixedCats = ["Clothes & Shopping","Food","Transport","Chanda (Donation)","Puja Essentials","Gifts & Bijoya","Miscellaneous"];
+  Object.keys(categoryColors).forEach(function(k) {
+    if (!fixedCats.includes(k)) delete categoryColors[k];
+  });
+  cancelEdit();
+  document.getElementById('customPandalName').value = "";
+  document.getElementById('customPandalName').style.display = 'none';
+  document.getElementById('newCategoryName').value = "";
+  document.getElementById('customCategoryRow').style.display = 'none';
+  document.getElementById('sessionCodeDisplay').style.display = 'none';
+  document.getElementById('sessionCodeInput').value = "";
+  refreshCategoryDropdown();
+  populateExpPandalDropdown();
+  renderBudget();
+  showSessionMessage("Session reset. All expenses and custom categories have been cleared.", false);
+}
+
+console.log("Session save/load/reset set up.");
+console.log("All systems loaded. Durga Puja interactive page is ready.");
+</script>
+</body>
+</html>
